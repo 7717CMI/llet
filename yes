@@ -1,0 +1,303 @@
+# High-Level Design (HLD) Generation Prompt for Mini Trello App
+
+## Context
+You are tasked with creating a comprehensive High-Level Design (HLD) document for a **Mini Trello App** - a full-featured Kanban board application with real-time collaboration capabilities. This application demonstrates enterprise-grade architecture with modern web technologies.
+
+## Application Overview
+The Mini Trello App is a collaborative project management tool featuring:
+- **Real-time collaboration** with WebSocket integration
+- **Kanban-style workflow management** with drag-and-drop functionality
+- **User authentication and authorization** with JWT
+- **Workspace-based multi-tenancy** 
+- **Activity tracking and audit trails**
+- **Responsive modern UI/UX**
+
+## Technology Stack Analysis
+
+### Backend Architecture
+- **Runtime**: Node.js with Express.js framework
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT (JSON Web Tokens) with bcryptjs password hashing
+- **Real-time Communication**: Socket.io for WebSocket connections
+- **Validation**: express-validator middleware
+- **Development**: nodemon for hot reloading
+
+### Frontend Architecture  
+- **Framework**: React 18+ with functional components and hooks
+- **Styling**: Tailwind CSS utility-first framework
+- **State Management**: Context API with custom providers
+- **Drag & Drop**: @dnd-kit library for accessible drag-and-drop
+- **Real-time**: Socket.io-client for WebSocket connections
+- **Build Tool**: Vite for fast development and builds
+
+### Key Libraries & Dependencies
+- **Backend**: cors, dotenv, express-validator, jsonwebtoken, mongoose, socket.io
+- **Frontend**: @dnd-kit/core, @dnd-kit/sortable, lucide-react (icons), socket.io-client
+
+## Database Schema Deep Dive
+
+### Core Entities and Relationships
+Based on the MongoDB models, the application follows a hierarchical data structure:
+
+```
+User (1) ←→ (M) Workspace (1) ←→ (M) List (1) ←→ (M) Card (1) ←→ (M) Comment
+                    ↓
+                Activity (audit trail)
+```
+
+### Data Models Analysis
+
+**User Model**:
+- Authentication credentials (name, email, hashed password)
+- Supports user management and authorization
+
+**Workspace Model**:
+- Multi-tenant workspace container
+- Owner/member role-based access control
+- Public/private visibility controls
+- Due date support for project timelines
+
+**List Model**:
+- Kanban columns within workspaces
+- Position-based ordering system
+- Card reference arrays for relationship management
+- Separate cardOrder array for custom card sequencing
+
+**Card Model**:
+- Core task/item entities
+- Rich metadata: title, description, assignee, labels, due dates
+- Position-based ordering within lists
+- Full-text search indexes on title/description
+- Multi-dimensional indexing for performance
+
+**Comment Model**:
+- Threaded discussions on cards
+- User attribution and timestamps
+- Card-scoped organization
+
+**Activity Model**:
+- Comprehensive audit trail system
+- Workspace-scoped activity logging
+- User action tracking with timestamps
+- Multiple indexing strategies for performance
+
+## API Architecture Analysis
+
+### RESTful Endpoint Structure
+The application implements a well-organized REST API with the following route modules:
+
+**Authentication Routes (/api/auth)**:
+- POST /register - User registration with validation
+- POST /login - JWT-based authentication
+- Protected route middleware implementation
+
+**Workspace Routes (/api/workspaces)**:
+- CRUD operations for workspace management
+- Member management and invitation system
+- Role-based access control enforcement
+
+**List Routes (/api/lists)**:
+- List lifecycle management within workspaces
+- Position-based reordering capabilities
+- Real-time synchronization triggers
+
+**Card Routes (/api/cards)**:
+- Comprehensive card management
+- Drag-and-drop position updates
+- Assignment and metadata management
+- Cross-list movement capabilities
+
+**Comment Routes (/api/comments)**:
+- Threaded commenting system
+- Card-scoped comment retrieval
+- User attribution and validation
+
+**Activity Routes (/api/activities)**:
+- Audit trail access with pagination
+- Workspace-filtered activity streams
+- Performance-optimized queries
+
+**Search Routes (/api/search)**:
+- Full-text search across cards
+- Advanced filtering capabilities
+
+## Real-time Architecture Deep Dive
+
+### Socket.io Implementation
+The application implements sophisticated real-time collaboration through Socket.io:
+
+**Connection Management**:
+- JWT-based socket authentication
+- User presence tracking and online indicators
+- Workspace-based room segregation
+- Connection state management with error handling
+
+**Real-time Event System**:
+```javascript
+// Core real-time events
+- "join-workspace" / "leave-workspace" - Room management
+- "cursor-move" - Real-time cursor sharing
+- "card-moved" - Drag-and-drop synchronization
+- "card-updated" - Content change propagation
+- "list-updated" - List modification sync
+- "cards-reordered" - Position change broadcasts
+- "user-joined" / "user-left" - Presence notifications
+```
+
+**Real-time Data Flow**:
+1. Client action triggers local state update
+2. API call persists changes to database
+3. Socket event broadcasts change to workspace room
+4. Other clients receive event and refresh their state
+5. UI updates with real-time visual feedback
+
+## Frontend Architecture Analysis
+
+### Component Architecture
+**Context-based State Management**:
+- AuthContext - User authentication state
+- WorkspaceContext - Workspace data and operations  
+- SocketContext - Real-time connection management
+
+**Key Components**:
+- WorkspaceView - Main kanban board interface
+- List - Individual kanban columns
+- Card - Task items with drag-and-drop
+- UserCursor - Real-time cursor visualization
+- CreateList/AddMembers - Modal workflows
+- ActivityFeed - Audit trail visualization
+
+### Drag & Drop Implementation
+Uses @dnd-kit for accessible drag-and-drop:
+- Multi-directional sorting (cards within lists, lists within workspace)
+- Real-time position synchronization
+- Keyboard navigation support
+- Touch device compatibility
+
+## Security Implementation
+
+### Authentication & Authorization
+- JWT token-based stateless authentication
+- bcryptjs password hashing with salt
+- Protected route middleware on all sensitive endpoints
+- Token expiration management (30-day expiry)
+
+### Access Control
+- Workspace-based multi-tenancy isolation
+- Owner/member role distinctions
+- Route-level authorization checks
+- Socket room-based access control
+
+### Data Validation
+- express-validator for comprehensive input validation
+- MongoDB schema-level constraints
+- Client-side form validation
+- CORS policy enforcement
+
+## Performance Optimizations
+
+### Database Indexing Strategy
+```javascript
+// Strategic indexes for query performance
+- User: { email: 1 } // Login performance
+- Workspace: { owner: 1, "members.user": 1 } // Access control
+- List: { workspaceId: 1, position: 1 } // Ordered retrieval
+- Card: { listId: 1, workspaceId: 1, title: "text", description: "text" }
+- Activity: { workspaceId: 1, timestamp: -1 } // Audit queries
+```
+
+### Real-time Optimization
+- Workspace-scoped Socket.io rooms to limit broadcast scope
+- Event-driven architecture minimizes unnecessary data transfer
+- Client-side state caching reduces server requests
+- Debounced cursor movement to prevent spam
+
+### Frontend Performance
+- React functional components with hooks
+- Context API for efficient state management
+- Vite for fast development builds
+- Tailwind CSS for optimized styling
+
+## Scalability Considerations
+
+### Horizontal Scaling Potential
+- Stateless API design supports load balancing
+- Socket.io can be clustered with Redis adapter
+- MongoDB supports sharding for data distribution
+- JWT tokens eliminate server-side session storage
+
+### Caching Strategy
+- Client-side workspace data caching
+- MongoDB query result caching opportunities
+- Static asset optimization with Vite
+- CDN potential for static resources
+
+## Deployment Architecture
+
+### Development Environment
+- Backend: nodemon with hot reloading on port 5000
+- Frontend: Vite dev server with HMR
+- Database: Local MongoDB instance
+- Environment variables for configuration
+
+### Production Considerations
+- Process management (PM2 recommended)
+- Reverse proxy setup (nginx)
+- SSL/TLS termination
+- Database connection pooling
+- Error logging and monitoring
+- Health check endpoints
+
+## Key Design Patterns
+
+### Backend Patterns
+- **Middleware Pattern**: Authentication, validation, error handling
+- **Repository Pattern**: Mongoose models abstract database access
+- **Observer Pattern**: Socket.io event-driven real-time updates
+- **MVC Pattern**: Routes (Controller), Models, Views (JSON responses)
+
+### Frontend Patterns
+- **Provider Pattern**: React Context for state management
+- **Container/Presentational**: Smart containers, dumb components
+- **Event-Driven**: Socket event listeners for real-time updates
+- **Hook Pattern**: Custom hooks for reusable stateful logic
+
+## Error Handling & Resilience
+
+### Backend Error Handling
+- Global error middleware for uncaught exceptions
+- Validation error responses with detailed messages
+- Database connection error handling
+- Socket connection error management
+
+### Frontend Error Handling
+- Error boundaries for component error catching
+- Socket connection retry logic
+- Form validation with user feedback
+- Loading states and error messages
+
+---
+
+## HLD Document Requirements
+
+Based on this comprehensive analysis, generate a High-Level Design document that includes:
+
+1. **System Overview** - Architecture diagram and technology stack
+2. **Component Design** - Detailed component breakdown with responsibilities
+3. **Database Design** - Entity relationships and schema details
+4. **API Design** - REST endpoints with request/response specifications
+5. **Real-time Architecture** - Socket.io event flow and connection management
+6. **Security Design** - Authentication, authorization, and data protection
+7. **Performance Considerations** - Indexing, caching, and optimization strategies
+8. **Deployment Architecture** - Infrastructure and scaling considerations
+9. **Data Flow Diagrams** - Request/response flows and real-time event propagation
+10. **Integration Points** - Third-party dependencies and internal service communication
+
+Ensure the HLD document is:
+- **Comprehensive** yet accessible to both technical and non-technical stakeholders
+- **Visually rich** with diagrams and flowcharts where appropriate
+- **Implementation-focused** with specific technology choices explained
+- **Scalability-aware** with growth considerations addressed
+- **Security-conscious** with protection measures clearly outlined
+
+The document should demonstrate how this Mini Trello App represents a production-ready, enterprise-grade collaborative application with modern architecture patterns and real-time capabilities.
